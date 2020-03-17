@@ -15,7 +15,7 @@ const constants = require("../client/js/constants.js");
 const inputs = require("./plugins/inputs");
 const PublicClient = require("./plugins/packages/publicClient");
 
-const MessageStorage = require("./plugins/messageStorage/sqlite");
+const MessageStorage = require("./plugins/messageStorage/mysql");
 const TextFileMessageStorage = require("./plugins/messageStorage/text");
 
 module.exports = Client;
