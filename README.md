@@ -1,3 +1,8 @@
+This is a fork that aims to make thelounge play better in a cloud environement
+
+- docker run --name some-mariadb -p 3306:3306 -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=thelounge mariadb
+- npm run dev
+
 <h1 align="center">
 	<img
 		width="300"
@@ -52,7 +57,7 @@ The Lounge is the official and community-managed fork of [Shout](https://github.
 ## Installation and usage
 
 The Lounge requires latest [Node.js](https://nodejs.org/) LTS version or more recent.
-[Yarn package manager](https://yarnpkg.com/) is also recommended.  
+[Yarn package manager](https://yarnpkg.com/) is also recommended.
 If you want to install with npm, `--unsafe-perm` is required for a correct install.
 
 ### Running stable releases
