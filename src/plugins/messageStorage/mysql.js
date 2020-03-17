@@ -17,8 +17,8 @@ const currentSchemaVersion = 1520239200;
 
 const schema = [
 	// Schema version #1
-	"CREATE TABLE IF NOT EXISTS options (user VARCHAR(255), name VARCHAR(255), value VARCHAR(255), CONSTRAINT name_unique UNIQUE (name))",
-	"CREATE TABLE IF NOT EXISTS messages (user VARCHAR(255), network VARCHAR(255), channel VARCHAR(255), time BIGINT, type VARCHAR(255), msg TEXT)",
+	"CREATE TABLE IF NOT EXISTS options (user VARCHAR(255), name VARCHAR(255), value VARCHAR(255), CONSTRAINT name_unique UNIQUE (name)) collate utf8mb4_unicode_ci;",
+	"CREATE TABLE IF NOT EXISTS messages (user VARCHAR(255), network VARCHAR(255), channel VARCHAR(255), time BIGINT, type VARCHAR(255), msg TEXT) collate utf8mb4_unicode_ci;",
 	"CREATE INDEX IF NOT EXISTS network_channel ON messages (network, channel)",
 	"CREATE INDEX IF NOT EXISTS time ON messages (time)",
 	"CREATE INDEX IF NOT EXISTS user ON messages (user)",
@@ -38,7 +38,8 @@ class MessageStorage {
 			host: "localhost",
 			user: "root",
 			password: "secret",
-			database: "thelounge", // this.client.name,
+			database: "thelounge",
+			charset: "utf8mb4_unicode_ci",
 		});
 
 		schema.forEach((line) => {
