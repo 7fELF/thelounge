@@ -162,8 +162,6 @@ class Uploader {
 			blobDest = `uploads/${blobDest}/${uuid}`;
 			uploadUrl = `uploads/${uuid}/${encodeURIComponent(filename)}`;
 
-			log.info(uploadUrl);
-
 			//upload in s3
 			const s3 = new S3({
 				endpoint: Helper.config.s3.endpoint,
