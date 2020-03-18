@@ -62,13 +62,13 @@ class Uploader {
 		let mimeType;
 		let fileBody;
 
-		//upload in s3
+		// upload in s3
 		const s3 = new S3({
 			endpoint: Helper.config.s3.endpoint,
 			accessKeyId: Helper.config.s3.accessKeyId,
 			secretAccessKey: Helper.config.s3.secretAccessKey,
 		});
-		var params = {
+		let params = {
 			Bucket: Helper.config.s3.bucket,
 			Key: blobFile,
 		};
@@ -162,14 +162,14 @@ class Uploader {
 			blobDest = `uploads/${blobDest}/${uuid}`;
 			uploadUrl = `uploads/${uuid}/${encodeURIComponent(filename)}`;
 
-			//upload in s3
+			// upload in s3
 			const s3 = new S3({
 				endpoint: Helper.config.s3.endpoint,
 				accessKeyId: Helper.config.s3.accessKeyId,
 				secretAccessKey: Helper.config.s3.secretAccessKey,
 			});
 
-			var params = {
+			let params = {
 				ContentType: mimetype,
 				Bucket: Helper.config.s3.bucket,
 				Key: blobDest,
