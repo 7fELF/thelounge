@@ -11,6 +11,7 @@ const readChunk = require("read-chunk");
 const crypto = require("crypto");
 const isUtf8 = require("is-utf8");
 const log = require("../log");
+const S3 = require("aws-sdk/clients/s3");
 
 const whitelist = [
 	"application/ogg",
@@ -56,46 +57,52 @@ class Uploader {
 
 	static async routeGetFile(req, res) {
 		const name = req.params.name;
+		const blobFolder = name.substring(0, 2);
+		const blobFile = `uploads/${blobFolder}/${name}`;
+		let mimeType;
+		let fileBody;
 
-		const nameRegex = /^[0-9a-f]{16}$/;
+		//upload in s3
+		const s3 = new S3({
+			endpoint: Helper.config.s3.endpoint,
+			accessKeyId: Helper.config.s3.accessKeyId,
+			secretAccessKey: Helper.config.s3.secretAccessKey,
+		});
+		var params = {
+			Bucket: "theloungeupload",
+			Key: blobFile,
+		};
+		s3.getObject(params, (err, data) => {
+			if (err) {
+				return res.status(500);
+			}
 
-		if (!nameRegex.test(name)) {
-			return res.status(404).send("Not found");
-		}
+			mimeType = data.ContentType;
+			fileBody = data.Body;
 
-		const folder = name.substring(0, 2);
-		const uploadPath = Helper.getFileUploadPath();
-		const filePath = path.join(uploadPath, folder, name);
-		let detectedMimeType = await Uploader.getFileType(filePath);
+			// doesn't exist
+			if (mimeType === "") {
+				return res.status(404).send("Not found");
+			}
+			// Force a download in the browser if it's not a whitelisted type (binary or otherwise unknown)
+			const contentDisposition = Uploader.isValidType(mimeType) ? "inline" : "attachment";
+			if (mimeType === "audio/vnd.wave") {
+				// Send a more common mime type for wave audio files
+				// so that browsers can play them correctly
+				mimeType = "audio/wav";
+			}
+			res.setHeader("Content-Disposition", contentDisposition);
+			res.setHeader("Cache-Control", "max-age=86400");
+			res.contentType(mimeType);
 
-		// doesn't exist
-		if (detectedMimeType === null) {
-			return res.status(404).send("Not found");
-		}
-
-		// Force a download in the browser if it's not a whitelisted type (binary or otherwise unknown)
-		const contentDisposition = Uploader.isValidType(detectedMimeType) ? "inline" : "attachment";
-
-		if (detectedMimeType === "audio/vnd.wave") {
-			// Send a more common mime type for wave audio files
-			// so that browsers can play them correctly
-			detectedMimeType = "audio/wav";
-		}
-
-		res.setHeader("Content-Disposition", contentDisposition);
-		res.setHeader("Cache-Control", "max-age=86400");
-		res.contentType(detectedMimeType);
-
-		return res.sendFile(filePath);
+			res.send(fileBody);
+		});
 	}
 
 	static routeUploadFile(req, res) {
 		let busboyInstance;
 		let uploadUrl;
-		let randomName;
-		let destDir;
-		let destPath;
-		let streamWriter;
+		let blobDest;
 
 		const doneCallback = () => {
 			// detach the stream and drain any remaining data
@@ -106,22 +113,10 @@ class Uploader {
 				busboyInstance.removeAllListeners();
 				busboyInstance = null;
 			}
-
-			// close the output file stream
-			if (streamWriter) {
-				streamWriter.end();
-				streamWriter = null;
-			}
 		};
 
 		const abortWithError = (err) => {
 			doneCallback();
-
-			// if we ended up erroring out, delete the output file from disk
-			if (destPath && fs.existsSync(destPath)) {
-				fs.unlinkSync(destPath);
-				destPath = null;
-			}
 
 			return res.status(400).json({error: err.message});
 		};
@@ -161,50 +156,33 @@ class Uploader {
 		busboyInstance.on("filesLimit", () => abortWithError(Error("Files limit reached")));
 		busboyInstance.on("fieldsLimit", () => abortWithError(Error("Fields limit reached")));
 
-		// generate a random output filename for the file
-		// we use do/while loop to prevent the rare case of generating a file name
-		// that already exists on disk
-		do {
-			randomName = crypto.randomBytes(8).toString("hex");
-			destDir = path.join(Helper.getFileUploadPath(), randomName.substring(0, 2));
-			destPath = path.join(destDir, randomName);
-		} while (fs.existsSync(destPath));
+		busboyInstance.on("file", (fieldname, fileStream, filename, encoding, mimetype) => {
+			let uuid = uuidv4();
+			blobDest = uuid.substring(0, 2);
+			blobDest = `uploads/${blobDest}/${uuid}`;
+			uploadUrl = `uploads/${uuid}/${encodeURIComponent(filename)}`;
 
-		// we split the filename into subdirectories (by taking 2 letters from the beginning)
-		// this helps avoid file system and certain tooling limitations when there are
-		// too many files on one folder
-		try {
-			fsextra.ensureDirSync(destDir);
-		} catch (err) {
-			log.err(`Error ensuring ${destDir} exists for uploads: ${err.message}`);
-			return abortWithError(err);
-		}
+			log.info(uploadUrl);
 
-		// Open a file stream for writing
-		streamWriter = fs.createWriteStream(destPath);
-		streamWriter.on("error", abortWithError);
-
-		busboyInstance.on("file", (fieldname, fileStream, filename) => {
-			uploadUrl = `${randomName}/${encodeURIComponent(filename)}`;
-
-			if (Helper.config.fileUpload.baseUrl) {
-				uploadUrl = new URL(uploadUrl, Helper.config.fileUpload.baseUrl).toString();
-			} else {
-				uploadUrl = `uploads/${uploadUrl}`;
-			}
-
-			// if the busboy data stream errors out or goes over the file size limit
-			// abort the processing with an error
-			fileStream.on("error", abortWithError);
-			fileStream.on("limit", () => {
-				fileStream.unpipe(streamWriter);
-				fileStream.on("readable", fileStream.read.bind(fileStream));
-
-				abortWithError(Error("File size limit reached"));
+			//upload in s3
+			const s3 = new S3({
+				endpoint: Helper.config.s3.endpoint,
+				accessKeyId: Helper.config.s3.accessKeyId,
+				secretAccessKey: Helper.config.s3.secretAccessKey,
 			});
 
-			// Attempt to write the stream to file
-			fileStream.pipe(streamWriter);
+			var params = {
+				ContentType: mimetype,
+				Bucket: "theloungeupload",
+				Key: blobDest,
+				Body: fileStream,
+			};
+			s3.upload(params, function(err, data) {
+				if (err) {
+					abortWithError(err);
+				}
+				log.info(data);
+			});
 		});
 
 		busboyInstance.on("finish", () => {
