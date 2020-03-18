@@ -3,17 +3,9 @@
 const log = require("../../log");
 const Helper = require("../../helper");
 const Msg = require("../../models/msg");
+const mysql = require("mysql");
 
-let mysql;
-
-try {
-	mysql = require("mysql");
-} catch (e) {
-	Helper.config.messageStorage = Helper.config.messageStorage.filter((item) => item !== "mysql");
-	log.error("Unable to load mysql module.");
-}
-
-const currentSchemaVersion = 1520239200;
+const currentSchemaVersion = 1584522274; // date '+%s'
 
 const schema = [
 	// Schema version #1

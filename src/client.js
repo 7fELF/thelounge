@@ -15,7 +15,8 @@ const constants = require("../client/js/constants.js");
 const inputs = require("./plugins/inputs");
 const PublicClient = require("./plugins/packages/publicClient");
 
-const MessageStorage = require("./plugins/messageStorage/mysql");
+const MysqlMessageStorage = require("./plugins/messageStorage/mysql");
+const SqliteMessageStorage = require("./plugins/messageStorage/sqlite");
 const TextFileMessageStorage = require("./plugins/messageStorage/text");
 
 module.exports = Client;
@@ -68,7 +69,11 @@ function Client(manager, name, config = {}) {
 
 	if (!Helper.config.public && client.config.log) {
 		if (Helper.config.messageStorage.includes("sqlite")) {
-			client.messageStorage.push(new MessageStorage(client));
+			client.messageStorage.push(new SqliteMessageStorage(client));
+		}
+
+		if (Helper.config.messageStorage.includes("mysql")) {
+			client.messageStorage.push(new MysqlMessageStorage(client));
 		}
 
 		if (Helper.config.messageStorage.includes("text")) {
