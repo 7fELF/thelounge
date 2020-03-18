@@ -181,7 +181,6 @@ class Uploader {
 				if (err) {
 					abortWithError(err);
 				}
-				log.info(data);
 			});
 		});
 
