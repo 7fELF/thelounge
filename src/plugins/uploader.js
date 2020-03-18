@@ -69,7 +69,7 @@ class Uploader {
 			secretAccessKey: Helper.config.s3.secretAccessKey,
 		});
 		var params = {
-			Bucket: "theloungeupload",
+			Bucket: Helper.config.s3.bucket,
 			Key: blobFile,
 		};
 		s3.getObject(params, (err, data) => {
@@ -171,7 +171,7 @@ class Uploader {
 
 			var params = {
 				ContentType: mimetype,
-				Bucket: "theloungeupload",
+				Bucket: Helper.config.s3.bucket,
 				Key: blobDest,
 				Body: fileStream,
 			};
